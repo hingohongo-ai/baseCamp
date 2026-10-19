@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Base Camp</title>
+<style>
+  :root {
+    --night: #0b1026;
+    --deep: #151b3f;
+    --ember: #ff7a3d;
+    --gold: #ffc857;
+    --ice: #8fe3ff;
+    --text: #eef2ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--text);
+    background: linear-gradient(180deg, var(--night) 0%, var(--deep) 55%, #3a2149 85%, #6b2f4a 100%);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Twinkling stars (pure CSS box-shadow trick) */
+  .stars, .stars::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 2px; height: 2px;
+    background: transparent;
+    box-shadow:
+      5vw 8vh #fff, 12vw 22vh #cfe8ff, 18vw 5vh #fff, 24vw 31vh #ffe9b0,
+      31vw 12vh #fff, 38vw 27vh #cfe8ff, 44vw 6vh #fff, 52vw 19vh #fff,
+      58vw 34vh #ffe9b0, 63vw 9vh #cfe8ff, 71vw 24vh #fff, 77vw 4vh #fff,
+      83vw 29vh #cfe8ff, 89vw 14vh #ffe9b0, 94vw 7vh #fff, 97vw 33vh #fff,
+      8vw 38vh #fff, 27vw 17vh #cfe8ff, 49vw 38vh #fff, 66vw 16vh #ffe9b0;
+    animation: twinkle 4s ease-in-out infinite alternate;
+  }
+  .stars::after { top: 6vh; left: 3vw; animation-delay: 2s; opacity: .7; }
+  @keyframes twinkle { from { opacity: .35; } to { opacity: 1; } }
+
+  /* Slow aurora glow */
+  .aurora {
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 70%;
+    background:
+      radial-gradient(40% 50% at 30% 40%, rgba(143,227,255,.28), transparent 70%),
+      radial-gradient(35% 45% at 70% 35%, rgba(120,255,180,.18), transparent 70%);
+    filter: blur(30px);
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translateX(-4%) skewX(-3deg); }
+    to   { transform: translateX(4%)  skewX(3deg); }
+  }
+
+  /* Mountain silhouettes */
+  .mountains { position: absolute; bottom: 0; left: 0; width: 100%; height: 42vh; }
+  .mountains path { transition: transform .4s; }
+
+  main {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 1.5rem 16vh;
+  }
+
+  .compass {
+    width: 84px; height: 84px;
+    margin-bottom: 1.2rem;
+    filter: drop-shadow(0 0 14px rgba(255,200,87,.55));
+  }
+  .needle { transform-origin: 50px 50px; animation: seek 6s ease-in-out infinite; }
+  @keyframes seek {
+    0%   { transform: rotate(20deg); }
+    20%  { transform: rotate(-35deg); }
+    45%  { transform: rotate(60deg); }
+    70%  { transform: rotate(-10deg); }
+    100% { transform: rotate(20deg); }
+  }
+
+  h1 {
+    font-size: clamp(2.4rem, 8vw, 5rem);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--gold), var(--ember), var(--gold));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 5s linear infinite;
+  }
+  @keyframes shimmer { to { background-position: 200% center; } }
+
+  p.tag {
+    margin-top: .8rem;
+    max-width: 34rem;
+    font-size: clamp(1rem, 2.6vw, 1.3rem);
+    font-style: italic;
+    color: #c9d3ff;
+  }
+
+  button {
+    margin-top: 2rem;
+    padding: .85rem 2rem;
+    font: inherit;
+    font-size: 1.05rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--night);
+    background: linear-gradient(135deg, var(--gold), var(--ember));
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 0 0 rgba(255,122,61,.6);
+    animation: pulse 2.4s infinite;
+    transition: transform .15s;
+  }
+  button:hover { transform: translateY(-2px) scale(1.04); }
+  @keyframes pulse {
+    70%  { box-shadow: 0 0 0 18px rgba(255,122,61,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,122,61,0); }
+  }
+
+  #log {
+    margin-top: 1.4rem;
+    min-height: 1.6em;
+    color: var(--ice);
+    font-size: 1.05rem;
+  }
+
+  footer {
+    position: absolute;
+    bottom: .8rem;
+    width: 100%;
+    text-align: center;
+    z-index: 2;
+    font-size: .8rem;
+    color: rgba(238,242,255,.55);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="stars"></div>
+  <div class="aurora"></div>
+
+  <svg class="mountains" viewBox="0 0 1200 400" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 400 L0 260 L140 150 L230 230 L360 90 L470 210 L560 160 L700 280 L820 120 L940 240 L1060 170 L1200 260 L1200 400 Z" fill="#1d1738" opacity=".85"/>
+    <path d="M0 400 L0 310 L110 240 L210 300 L340 200 L450 290 L580 230 L720 330 L860 220 L980 300 L1100 250 L1200 320 L1200 400 Z" fill="#0f0b22"/>
+  </svg>
+
+  <main>
+    <svg class="compass" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#ffc857" stroke-width="3"/>
+      <circle cx="50" cy="50" r="38" fill="rgba(11,16,38,.7)" stroke="#ffc857" stroke-width="1" opacity=".6"/>
+      <text x="50" y="16" text-anchor="middle" fill="#ffc857" font-size="9" font-family="Georgia,serif">N</text>
+      <g class="needle">
+        <polygon points="50,14 56,50 44,50" fill="#ff7a3d"/>
+        <polygon points="50,86 56,50 44,50" fill="#8fe3ff"/>
+      </g>
+      <circle cx="50" cy="50" r="4" fill="#ffc857"/>
+    </svg>
+
+    <h1>Base Camp</h1>
+    <p class="tag">The path ahead is unmapped. The gear is packed. The server is, miraculously, answering.</p>
+
+    <button id="go">Begin the Expedition</button>
+    <div id="log" aria-live="polite"></div>
+  </main>
+
+  <footer>Test site &middot; if you can read this, the trail is open.</footer>
+
+<script>
+  const messages = [
+    "Provisions checked. Rope: plenty.",
+    "Summit spotted on the horizon.",
+    "A hidden pass reveals itself...",
+    "The wind shifts. Onward!",
+    "You found a flag. Plant it."
+  ];
+  let i = 0;
+  document.getElementById("go").addEventListener("click", () => {
+    document.getElementById("log").textContent = messages[i++ % messages.length];
+  });
+</script>
+</body>
+</html>
