@@ -19,7 +19,8 @@
     font-family: Georgia, "Times New Roman", serif;
     color: var(--text);
     background: linear-gradient(180deg, var(--night) 0%, var(--deep) 55%, #3a2149 85%, #6b2f4a 100%);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     position: relative;
   }
 
@@ -64,13 +65,13 @@
   main {
     position: relative;
     z-index: 2;
-    height: 100%;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 0 1.5rem 16vh;
+    padding: 2rem 1.5rem 16vh;
   }
 
   .compass {
@@ -147,6 +148,71 @@
     color: rgba(238,242,255,.55);
   }
 
+  /* Game cards */
+  .games {
+    margin-top: 2.2rem;
+    width: 100%;
+    max-width: 44rem;
+  }
+  .games h2 {
+    font-size: .85rem;
+    font-weight: normal;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    color: var(--ice);
+    opacity: .8;
+    margin-bottom: .9rem;
+  }
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+  .card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 21rem;
+    padding: 1rem 1.2rem;
+    text-align: left;
+    text-decoration: none;
+    color: var(--text);
+    background: rgba(21, 27, 63, .65);
+    border: 1px solid rgba(255, 200, 87, .35);
+    border-radius: 14px;
+    backdrop-filter: blur(6px);
+    transition: transform .2s, border-color .2s, box-shadow .2s;
+  }
+  .card:hover, .card:focus-visible {
+    transform: translateY(-4px);
+    border-color: var(--gold);
+    box-shadow: 0 8px 28px rgba(255, 122, 61, .3), 0 0 0 1px rgba(255, 200, 87, .4);
+    outline: none;
+  }
+  .card .icon {
+    flex: none;
+    width: 3.4rem;
+    height: 3.4rem;
+    display: grid;
+    place-items: center;
+    font-size: 1.9rem;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255, 200, 87, .35), rgba(11, 16, 38, .8));
+    box-shadow: 0 0 14px rgba(255, 200, 87, .35);
+  }
+  .card .title { display: block; font-size: 1.15rem; letter-spacing: .06em; color: var(--gold); }
+  .card .blurb { display: block; margin-top: .2rem; font-size: .9rem; font-style: italic; color: #c9d3ff; }
+  .card .go {
+    display: block;
+    margin-top: .45rem;
+    font-size: .75rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--ember);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; }
   }
@@ -178,6 +244,20 @@
 
     <button id="go">Begin the Expedition</button>
     <div id="log" aria-live="polite"></div>
+
+    <section class="games" aria-labelledby="games-heading">
+      <h2 id="games-heading">Expeditions</h2>
+      <div class="cards">
+        <a class="card" href="asteroidDoge/">
+          <span class="icon" aria-hidden="true">&#128021;</span>
+          <span>
+            <span class="title">Asteroid Doge</span>
+            <span class="blurb">Dodge the rocks. Survive the dark.</span>
+            <span class="go">Play &rarr;</span>
+          </span>
+        </a>
+      </div>
+    </section>
   </main>
 
   <footer>Test site &middot; if you can read this, the trail is open.</footer>

@@ -10,6 +10,7 @@ No build step and no dependencies. Edit the HTML, push, and the site updates.
 
     site/index.html                 the page served at the domain root
     .github/workflows/deploy.yml    publishes site/ to the "deploy" branch
+    docs/SETUP-GUIDE.md             full step-by-step setup roadmap (GitHub, Plesk, tokens)
     README.md                       this file
 
 ## Edit
