@@ -53,7 +53,7 @@ if ($m === 'claude') {                      // stream a real model response thro
     $pad = max(0, min(65536, (int)($_GET['pad'] ?? 2048)));
     echo padding($pad);
     flush();
-    $t0 = microtime(true); $first = null; $deltas = 0; $buf = '';
+    $t0 = microtime(true); $first = null; $deltas = 0; $buf = ''; $types = []; $stop = '?'; $other = '';
     $ch = curl_init('https://api.anthropic.com/v1/messages');
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
@@ -63,12 +63,15 @@ if ($m === 'claude') {                      // stream a real model response thro
         ]),
         CURLOPT_HTTPHEADER => ['content-type: application/json', 'anthropic-version: 2023-06-01', 'x-api-key: ' . $key],
         CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => 60,
-        CURLOPT_WRITEFUNCTION => function ($c, $data) use (&$buf, &$first, &$deltas, $t0) {
+        CURLOPT_WRITEFUNCTION => function ($c, $data) use (&$buf, &$first, &$deltas, &$types, &$stop, &$other, $t0) {
             $buf .= $data;
             while (($p = strpos($buf, "\n")) !== false) {
                 $line = trim(substr($buf, 0, $p)); $buf = substr($buf, $p + 1);
+                if ($line !== '' && strpos($line, 'data:') !== 0 && strpos($line, 'event:') !== 0 && strlen($other) < 300) { $other .= $line . ' '; }
                 if (strpos($line, 'data:') !== 0) continue;
                 $j = json_decode(trim(substr($line, 5)), true);
+                $ty = $j['type'] ?? '?'; $types[$ty] = ($types[$ty] ?? 0) + 1;
+                if (isset($j['delta']['stop_reason'])) { $stop = (string)$j['delta']['stop_reason']; }
                 if (($j['type'] ?? '') === 'content_block_delta' && isset($j['delta']['text'])) {
                     if ($first === null) { $first = microtime(true) - $t0; }
                     $deltas++;
@@ -84,6 +87,8 @@ if ($m === 'claude') {                      // stream a real model response thro
     $err = curl_error($ch); $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE); curl_close($ch);
     printf("\n\n-- http %d, first text after %.2f s, total %.2f s, %d deltas%s\n",
         $code, $first ?? -1, microtime(true) - $t0, $deltas, $err ? ", curl: $err" : '');
+    echo "-- events: " . json_encode($types) . " stop_reason: $stop\n";
+    if ($other !== '') echo "-- non-event text: " . substr($other, 0, 300) . "\n";
     exit;
 }
 
