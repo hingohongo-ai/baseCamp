@@ -23,7 +23,8 @@ if ($m === 'sleep') {                       // does a long request survive?
 if ($m === 'stream') {                      // does plain streaming reach the browser in pieces?
     header('Content-Type: text/plain; charset=utf-8');
     nobuf();
-    echo str_repeat(' ', 2048) . "\n";      // push past small proxy buffers
+    $pad = max(0, min(65536, (int)($_GET['pad'] ?? 2048)));
+    echo str_repeat(' ', $pad) . "\n";      // push past proxy buffers (size set by ?pad=)
     for ($i = 1; $i <= 8; $i++) {
         echo "chunk $i\n";
         flush();
@@ -42,7 +43,8 @@ if ($m === 'claude') {                      // stream a real model response thro
     $keyFile = dirname($_SERVER['DOCUMENT_ROOT']) . '/private/anthropic.key';
     $key = is_readable($keyFile) ? trim((string)file_get_contents($keyFile)) : '';
     if ($key === '') exit("no-key\n");
-    echo str_repeat(' ', 2048) . "\n";
+    $pad = max(0, min(65536, (int)($_GET['pad'] ?? 2048)));
+    echo str_repeat(' ', $pad) . "\n";
     flush();
     $t0 = microtime(true); $first = null; $deltas = 0; $buf = '';
     $ch = curl_init('https://api.anthropic.com/v1/messages');
@@ -122,17 +124,20 @@ header('Content-Type: text/html; charset=utf-8');
 <button data-m="info">Info + speed</button>
 <button data-m="sleep" data-n="40">Sleep 40 s</button>
 <button data-m="sleep" data-n="75">Sleep 75 s</button>
-<button data-m="stream">Stream timing</button>
+<button data-m="stream">Stream timing (pad 2K)</button>
+<button data-m="stream" data-pad="16384">Stream (pad 16K)</button>
+<button data-m="stream" data-pad="65536">Stream (pad 64K)</button>
 <button data-m="claude">Claude stream</button>
+<button data-m="claude" data-pad="32768">Claude stream (pad 32K)</button>
 <pre id="out">Pick a test.</pre>
 <script>
 const out = document.getElementById('out');
 document.querySelectorAll('button').forEach(b => b.onclick = async () => {
-  const m = b.dataset.m, n = b.dataset.n;
+  const m = b.dataset.m, n = b.dataset.n, pad = b.dataset.pad;
   out.textContent = 'running ' + m + (n ? ' ' + n : '') + '...\n';
   const t0 = performance.now(), stamp = () => ((performance.now() - t0) / 1000).toFixed(2) + 's';
   try {
-    const r = await fetch('?m=' + m + (n ? '&n=' + n : ''), {cache: 'no-store'});
+    const r = await fetch('?m=' + m + (n ? '&n=' + n : '') + (pad ? '&pad=' + pad : ''), {cache: 'no-store'});
     out.textContent = 'HTTP ' + r.status + ' after ' + stamp() + '\n';
     const rd = r.body.getReader(), dec = new TextDecoder();
     for (;;) {
