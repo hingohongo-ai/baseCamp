@@ -45,17 +45,17 @@
 
   /* The lantern: a darkness layer with a hole that follows the pointer */
   .dark {
-    --mx: 50vw; --my: 40vh; --r: 210px; --a: .5;
+    --mx: 50vw; --my: 40vh; --r: 210px; --a: .56;
     position: fixed; inset: 0;
     pointer-events: none;
     z-index: 8;
     background: radial-gradient(circle at var(--mx) var(--my),
       rgba(3,3,5,0) 0,
       rgba(3,3,5,.06) calc(var(--r) * .45),
-      rgba(3,3,5,.32) var(--r),
+      rgba(3,3,5,.36) var(--r),
       rgba(3,3,5,var(--a)) calc(var(--r) * 2.3));
   }
-  @media (pointer: coarse) { .dark { --a: .4; --r: 170px; } }
+  @media (pointer: coarse) { .dark { --a: .46; --r: 170px; } }
 
   /* Warm light that rides with the lantern, so it still stands out */
   .lamp {
@@ -64,10 +64,19 @@
     z-index: 9;
     mix-blend-mode: screen;
     background: radial-gradient(circle at var(--mx, 50vw) var(--my, 40vh),
-      rgba(255,196,130,.20) 0,
-      rgba(255,150,80,.10) calc(var(--r, 210px) * .8),
+      rgba(255,196,130,.24) 0,
+      rgba(255,150,80,.12) calc(var(--r, 210px) * .8),
       rgba(255,120,60,0) calc(var(--r, 210px) * 1.9));
   }
+
+  /* A vague skeletal arm holding the unseen lantern. Sits under the dark layer, so it fades as it leaves the light */
+  .arm {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 7;
+    opacity: .30;
+  }
+  .arm path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
   main {
     position: relative;
@@ -229,25 +238,30 @@
     color: rgba(143,138,123,.75);
   }
 
-  /* Things that watch from the dark */
+  /* Things that watch from the dark (and flinch from the lantern) */
   .eyes {
     position: fixed; z-index: 7; pointer-events: none;
     display: flex; gap: 11px; opacity: 0;
-    animation: watch 2.6s ease-in-out forwards;
+    transition: opacity .7s ease-in-out;
   }
+  .eyes.on { opacity: .9; }
+  .eyes.gone { opacity: 0; transition: opacity .12s linear; }
   .eyes i {
     width: 6px; height: 3px; border-radius: 50%;
     background: #f2e8c9;
     box-shadow: 0 0 8px 2px rgba(255,214,150,.55);
+    transition: transform .12s ease-in;
   }
-  @keyframes watch {
-    0% { opacity: 0; transform: scaleY(1); }
-    15%, 40% { opacity: .9; transform: scaleY(1); }
-    46% { transform: scaleY(.1); }
-    52% { transform: scaleY(1); }
-    80% { opacity: .9; }
-    100% { opacity: 0; }
+  .eyes.shut i { transform: scaleY(.12); }
+  /* What they turn into: a vague scuttling shadow, felt more than seen */
+  .skitter {
+    position: fixed; z-index: 8; pointer-events: none;
+    width: 104px; height: 46px; margin: -23px 0 0 -52px;
+    opacity: 0; transition: opacity .25s ease-out;
+    filter: blur(2.2px);
   }
+  .skitter.on { opacity: .85; }
+  .skitter svg { width: 100%; height: 100%; overflow: visible; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -256,6 +270,12 @@
 </head>
 <body>
   <div class="fog"></div>
+  <svg class="arm" id="arm" aria-hidden="true">
+    <defs>
+      <linearGradient id="fadeBone" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#cfc8b4" stop-opacity="0"/><stop offset="1" stop-color="#cfc8b4" stop-opacity="1"/></linearGradient>
+      <linearGradient id="fadeEdge" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0b0a09" stop-opacity="0"/><stop offset="1" stop-color="#0b0a09" stop-opacity="1"/></linearGradient>
+    </defs>
+  </svg>
   <div class="dark" id="dark"></div>
   <div class="lamp" id="lamp"></div>
 
@@ -343,6 +363,71 @@
   addEventListener("pointermove", function (e) { tx = e.clientX; ty = e.clientY; lastMove = performance.now(); });
   var baseR = matchMedia("(pointer: coarse)").matches ? 170 : 210;
 
+  /* --- Shadowy arm holding the lantern (two-bone IK from a lagging shoulder) --- */
+  var armSvg = document.getElementById("arm"), NS = "http://www.w3.org/2000/svg";
+  function bonePath(w, grad) {
+    var edge = document.createElementNS(NS, "path"), fill = document.createElementNS(NS, "path");
+    edge.setAttribute("stroke", grad ? "url(#fadeEdge)" : "#0b0a09"); edge.setAttribute("stroke-width", w + 3);
+    fill.setAttribute("stroke", grad ? "url(#fadeBone)" : "#cfc8b4"); fill.setAttribute("stroke-width", w);
+    armSvg.appendChild(edge); armSvg.appendChild(fill);
+    return function (d) { edge.setAttribute("d", d); fill.setAttribute("d", d); };
+  }
+  /* A faint lantern around the light's centre, hung by a short chain from the hand */
+  function lampPath(w, dash) {
+    var edge = document.createElementNS(NS, "path"), fill = document.createElementNS(NS, "path");
+    edge.setAttribute("stroke", "#0b0a09"); edge.setAttribute("stroke-width", w + 2);
+    fill.setAttribute("stroke", "#b59a72"); fill.setAttribute("stroke-width", w);
+    if (dash) { edge.setAttribute("stroke-dasharray", dash); fill.setAttribute("stroke-dasharray", dash); }
+    armSvg.appendChild(edge); armSvg.appendChild(fill);
+    return function (d) { edge.setAttribute("d", d); fill.setAttribute("d", d); };
+  }
+  var lanFrame = lampPath(2.4), lanBars = lampPath(1.3), lanChain = lampPath(2.2, "3.5 2.5");
+  var HANG = 66;                                      /* grip point sits this far above the light's centre */
+  function lantern(cx, cy) {
+    function q(x, y) { return (cx + x).toFixed(1) + " " + (cy + y).toFixed(1); }
+    lanFrame("M" + q(-16, -27) + "L" + q(-9, -37) + "L" + q(9, -37) + "L" + q(16, -27) + "Z" +   /* cap */
+             "M" + q(-16, -27) + "L" + q(-18, 27) + "M" + q(16, -27) + "L" + q(18, 27) +           /* posts */
+             "M" + q(-18, 27) + "L" + q(-13, 35) + "L" + q(13, 35) + "L" + q(18, 27) + "Z");       /* base */
+    lanBars("M" + q(-16, -27) + "L" + q(16, -27) + "M" + q(-18, 27) + "L" + q(18, 27) +
+            "M" + q(-6, -27) + "L" + q(-6.5, 27) + "M" + q(6, -27) + "L" + q(6.5, 27));
+    lanChain("M" + q(0, -37) + "L" + q(0, -HANG));                                                   /* hangs straight down */
+  }
+  var K = 1.35, Z = 0.75;                            /* overall scale: stroke widths (K) and geometry (Z) */
+  var radius = bonePath(3.6 * K, true), ulna = bonePath(4.2 * K, true), carpus = bonePath(8 * K), palm = bonePath(8 * K);
+  var thumb = bonePath(3 * K), fingers = [bonePath(3 * K), bonePath(3.2 * K), bonePath(3 * K), bonePath(2.7 * K)];
+  var fadeB = document.getElementById("fadeBone"), fadeE = document.getElementById("fadeEdge");
+  var side = 1;
+  function pt(p) { return p[0].toFixed(1) + " " + p[1].toFixed(1); }
+  function poly(pts) { return "M" + pts.map(pt).join("L"); }
+  /* A skeletal hand closed on an unseen handle just above the light's centre, with a stub of forearm fading into the dark */
+  function arm(lx, ly) {
+    var want = lx > innerWidth * 0.62 ? -1 : (lx < innerWidth * 0.38 ? 1 : (side < 0 ? -1 : 1));
+    side += (want - side) * 0.05;
+    var s = side, G = [lx, ly - HANG], rho = 8;
+    lantern(lx, ly);
+    function ring(r, deg) { var f = deg * Math.PI / 180; r *= Z; return [G[0] + s * r * Math.cos(f), G[1] - r * Math.sin(f)]; }
+    /* palm runs in from the side to the knuckles; the wrist bends up a little beyond it */
+    var Kc = ring(rho + 6, 38);
+    var pa = 0.2, fa = 0.62;
+    var W = [Kc[0] + s * 34 * Z * Math.cos(pa), Kc[1] - 34 * Z * Math.sin(pa)];
+    var F = [W[0] + s * 74 * Z * Math.cos(fa), W[1] - 74 * Z * Math.sin(fa)];   /* far end of the forearm stub */
+    var fx = Math.cos(fa) * s, fy = -Math.sin(fa), nx = -fy, ny = fx, o = 3.2 * K;
+    fadeB.setAttribute("x1", F[0]); fadeB.setAttribute("y1", F[1]); fadeB.setAttribute("x2", W[0]); fadeB.setAttribute("y2", W[1]);
+    fadeE.setAttribute("x1", F[0]); fadeE.setAttribute("y1", F[1]); fadeE.setAttribute("x2", W[0]); fadeE.setAttribute("y2", W[1]);
+    radius(poly([[F[0] + nx * o, F[1] + ny * o], [W[0] + nx * o * .7, W[1] + ny * o * .7]]));
+    ulna(poly([[F[0] - nx * o, F[1] - ny * o], [W[0] - nx * o * .7, W[1] - ny * o * .7]]));
+    carpus("M" + pt(W) + "l.1 0");
+    palm(poly([W, Kc]));
+    /* four fingers wrapped over the top and round the far side of the handle, tips curled under */
+    var ends = [262, 274, 268, 252], i;
+    for (i = 0; i < 4; i++) {
+      var r = rho + 3.2 + i * 4.6;
+      fingers[i](poly([ring(r, 38), ring(r, 95), ring(r, 165), ring(r - 1, 225), ring(r - 2, ends[i])]));
+    }
+    /* thumb laid across the top of the fingers */
+    thumb(poly([ring(rho + 8, 30), ring(rho + 17, 72), ring(rho + 15, 118)]));
+  }
+
   function frame(t) {
     if (t - lastMove > 3500) {
       tx = w * (0.5 + 0.32 * Math.sin(t / 3300));
@@ -357,13 +442,16 @@
     lamp.style.setProperty("--mx", x + "px");
     lamp.style.setProperty("--my", y + "px");
     lamp.style.setProperty("--r", r + "px");
+    arm(x, y);
+    critterStep(t, x, y, r);
     requestAnimationFrame(frame);
   }
   if (reduce) {
     dark.style.setProperty("--mx", "50vw");
     dark.style.setProperty("--my", "38vh");
     dark.style.setProperty("--r", "420px");
-    dark.style.setProperty("--a", ".4");
+    dark.style.setProperty("--a", ".46");
+    arm(w * 0.5, h * 0.38);
   } else {
     requestAnimationFrame(frame);
   }
@@ -430,21 +518,83 @@
     setTimeout(function () { ribs.classList.remove("rattle"); }, 600);
   });
 
-  /* --- Eyes in the dark --- */
-  function watcher() {
-    if (!document.hidden) {
-      var e = document.createElement("div");
-      e.className = "eyes";
-      e.innerHTML = "<i></i><i></i>";
-      var edge = Math.random() < 0.5;
-      e.style.left = (edge ? (Math.random() < 0.5 ? 3 + Math.random() * 14 : 80 + Math.random() * 15) : 10 + Math.random() * 80) + "vw";
-      e.style.top = (edge ? 15 + Math.random() * 70 : (Math.random() < 0.5 ? 4 : 88) + Math.random() * 6) + "vh";
-      document.body.appendChild(e);
-      setTimeout(function () { e.remove(); }, 2800);
-    }
-    setTimeout(watcher, 14000 + Math.random() * 16000);
+  /* --- Eyes in the dark: they watch, and bolt from the lantern light --- */
+  var critters = [], nextSpawn = 1300, lastT = 0, spawned = 0;
+  /* A low, ragged smear with too many thin limbs: seen out of the corner of the eye, never quite resolved */
+  var SK = '<svg viewBox="0 0 76 34" aria-hidden="true"><g fill="none" stroke="#020203" stroke-linecap="round" stroke-width="1.8">' +
+    '<path d="M26 16 L10 6 L2 12 M27 18 L8 19 L3 28 M30 20 L20 29 L15 33 M33 14 L28 3 L33 0 M48 15 L62 5 L73 9 M49 18 L68 21 L72 29 M45 20 L55 30 L58 33"/></g>' +
+    '<ellipse cx="38" cy="18" rx="15" ry="7" fill="#020203"/><ellipse cx="33" cy="15" rx="8" ry="5" fill="#020203"/></svg>';
+
+  function pickSpot(lx, ly, minD) {
+    var px, py, tries = 0;
+    do {
+      if (Math.random() < 0.5) {
+        px = (Math.random() < 0.5 ? 0.03 + Math.random() * 0.14 : 0.8 + Math.random() * 0.15) * w;
+        py = (0.15 + Math.random() * 0.7) * h;
+      } else {
+        px = (0.1 + Math.random() * 0.8) * w;
+        py = ((Math.random() < 0.5 ? 0.04 : 0.88) + Math.random() * 0.06) * h;
+      }
+      tries++;
+    } while (Math.hypot(px - lx, py - ly) < minD && tries < 14);
+    return [px, py];
   }
-  if (!reduce) setTimeout(watcher, 9000);
+  function spawn(lx, ly) {
+    var spot = pickSpot(lx, ly, baseR * 1.5), e = document.createElement("div");
+    e.className = "eyes"; e.innerHTML = "<i></i><i></i>";
+    e.style.left = (spot[0] - 11.5) + "px"; e.style.top = (spot[1] - 1.5) + "px";
+    document.body.appendChild(e);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { e.classList.add("on"); }); });
+    critters.push({ st: "watch", el: e, x: spot[0], y: spot[1], age: 0, life: 4 + Math.random() * 3.5, blink: 1.2 + Math.random() * 1.5 });
+    spawned++;
+  }
+  function flee(c, lx) {
+    c.st = "shut"; c.t = 0; c.el.classList.add("shut");
+    c.dir = c.x < lx ? -1 : 1;                               /* run away from the light, off the nearest side */
+    if (c.x < w * 0.12) c.dir = -1; else if (c.x > w * 0.88) c.dir = 1;
+  }
+  function critterStep(t, lx, ly, r) {
+    var dt = Math.min((t - lastT) / 1000, 0.05); lastT = t;
+    if (t > nextSpawn && critters.length < 2) {
+      spawn(lx, ly);
+      nextSpawn = t + 11000 + Math.random() * 13000;
+    }
+    for (var i = critters.length - 1; i >= 0; i--) {
+      var c = critters[i];
+      if (c.st === "watch") {
+        c.age += dt;
+        if (c.age > c.blink) { c.el.classList.add("shut"); if (c.age > c.blink + 0.16) { c.el.classList.remove("shut"); c.blink = c.age + 2 + Math.random() * 3; } }
+        if (c.age > 0.5 && Math.hypot(c.x - lx, c.y - ly) < r * 0.85) flee(c, lx);
+        else if (c.age > c.life) { c.el.classList.remove("on"); c.st = "fade"; c.t = 0; }
+      } else if (c.st === "fade") {
+        c.t += dt; if (c.t > 0.9) { c.el.remove(); critters.splice(i, 1); }
+      } else if (c.st === "shut") {                           /* eyes snap shut, then the shape takes over */
+        c.t += dt;
+        if (c.t > 0.2) {
+          c.el.classList.add("gone");
+          var k = document.createElement("div");
+          k.className = "skitter"; k.innerHTML = SK;
+          k.style.transform = "scaleX(" + (-c.dir) + ")";
+          k.style.left = c.x + "px"; k.style.top = c.y + "px";
+          document.body.appendChild(k);
+          requestAnimationFrame(function () { k.classList.add("on"); });
+          c.sk = k; c.st = "run"; c.t = 0; c.burst = 0.1; c.moving = true;
+          setTimeout((function (el) { return function () { el.remove(); }; })(c.el), 200);
+          c.el = null;
+        }
+      } else if (c.st === "run") {                            /* scuttle: short fast bursts with tiny stops */
+        c.t += dt; c.burst -= dt;
+        if (c.burst <= 0) { c.moving = !c.moving; c.burst = c.moving ? 0.07 + Math.random() * 0.08 : 0.03 + Math.random() * 0.07; }
+        if (c.moving) {
+          c.x += c.dir * 820 * dt;
+          c.y += (Math.random() - 0.5) * 420 * dt;
+          c.sk.firstChild.style.transform = (Math.floor(c.t * 30) % 2) ? "scaleY(.82)" : "scaleY(1)";
+        }
+        c.sk.style.left = c.x + "px"; c.sk.style.top = c.y + "px";
+        if (c.x < -90 || c.x > w + 90) { c.sk.remove(); critters.splice(i, 1); }
+      }
+    }
+  }
 })();
 </script>
 </body>

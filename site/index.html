@@ -3,277 +3,599 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Base Camp</title>
+<title>Skeletonbelly</title>
+<meta name="description" content="Browser games from somewhere dark. Something rattles inside.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#128128;</text></svg>">
 <style>
   :root {
-    --night: #0b1026;
-    --deep: #151b3f;
-    --ember: #ff7a3d;
-    --gold: #ffc857;
-    --ice: #8fe3ff;
-    --text: #eef2ff;
+    --void: #0c0d11;
+    --soot: #1b1815;
+    --bone: #d9d3c1;
+    --bone-dim: #aaa594;
+    --rust: #a5431f;
+    --ember: #ff6a2b;
+    --ember-hot: #ffb36b;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
+  html, body { min-height: 100%; }
   body {
-    font-family: Georgia, "Times New Roman", serif;
-    color: var(--text);
-    background: linear-gradient(180deg, var(--night) 0%, var(--deep) 55%, #3a2149 85%, #6b2f4a 100%);
+    font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    color: var(--bone);
+    background: radial-gradient(120% 90% at 50% 30%, #2a231c 0%, var(--soot) 45%, var(--void) 100%);
     overflow-x: hidden;
-    overflow-y: auto;
     position: relative;
   }
 
-  /* Twinkling stars (pure CSS box-shadow trick) */
-  .stars, .stars::after {
-    content: "";
-    position: absolute;
-    top: 0; left: 0;
-    width: 2px; height: 2px;
-    background: transparent;
-    box-shadow:
-      5vw 8vh #fff, 12vw 22vh #cfe8ff, 18vw 5vh #fff, 24vw 31vh #ffe9b0,
-      31vw 12vh #fff, 38vw 27vh #cfe8ff, 44vw 6vh #fff, 52vw 19vh #fff,
-      58vw 34vh #ffe9b0, 63vw 9vh #cfe8ff, 71vw 24vh #fff, 77vw 4vh #fff,
-      83vw 29vh #cfe8ff, 89vw 14vh #ffe9b0, 94vw 7vh #fff, 97vw 33vh #fff,
-      8vw 38vh #fff, 27vw 17vh #cfe8ff, 49vw 38vh #fff, 66vw 16vh #ffe9b0;
-    animation: twinkle 4s ease-in-out infinite alternate;
-  }
-  .stars::after { top: 6vh; left: 3vw; animation-delay: 2s; opacity: .7; }
-  @keyframes twinkle { from { opacity: .35; } to { opacity: 1; } }
-
-  /* Slow aurora glow */
-  .aurora {
-    position: absolute;
-    inset: -20% -10% auto -10%;
-    height: 70%;
+  /* Drifting fog */
+  .fog {
+    position: fixed; inset: -20%;
+    pointer-events: none;
+    z-index: 1;
     background:
-      radial-gradient(40% 50% at 30% 40%, rgba(143,227,255,.28), transparent 70%),
-      radial-gradient(35% 45% at 70% 35%, rgba(120,255,180,.18), transparent 70%);
-    filter: blur(30px);
-    animation: drift 18s ease-in-out infinite alternate;
+      radial-gradient(40% 30% at 20% 70%, rgba(150,140,120,.10), transparent 70%),
+      radial-gradient(45% 30% at 80% 60%, rgba(150,140,120,.08), transparent 70%),
+      radial-gradient(60% 25% at 50% 95%, rgba(150,140,120,.12), transparent 70%);
+    filter: blur(22px);
+    animation: fog 40s ease-in-out infinite alternate;
   }
-  @keyframes drift {
-    from { transform: translateX(-4%) skewX(-3deg); }
-    to   { transform: translateX(4%)  skewX(3deg); }
+  @keyframes fog {
+    from { transform: translateX(-5%) scale(1); }
+    to   { transform: translateX(5%) scale(1.08); }
   }
 
-  /* Mountain silhouettes */
-  .mountains { position: absolute; bottom: 0; left: 0; width: 100%; height: 42vh; }
-  .mountains path { transition: transform .4s; }
+  /* The lantern: a darkness layer with a hole that follows the pointer */
+  .dark {
+    --mx: 50vw; --my: 40vh; --r: 210px; --a: .56;
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 8;
+    background: radial-gradient(circle at var(--mx) var(--my),
+      rgba(3,3,5,0) 0,
+      rgba(3,3,5,.06) calc(var(--r) * .45),
+      rgba(3,3,5,.36) var(--r),
+      rgba(3,3,5,var(--a)) calc(var(--r) * 2.3));
+  }
+  @media (pointer: coarse) { .dark { --a: .46; --r: 170px; } }
+
+  /* Warm light that rides with the lantern, so it still stands out */
+  .lamp {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 9;
+    mix-blend-mode: screen;
+    background: radial-gradient(circle at var(--mx, 50vw) var(--my, 40vh),
+      rgba(255,196,130,.24) 0,
+      rgba(255,150,80,.12) calc(var(--r, 210px) * .8),
+      rgba(255,120,60,0) calc(var(--r, 210px) * 1.9));
+  }
+
+  /* A vague skeletal arm holding the unseen lantern. Sits under the dark layer, so it fades as it leaves the light */
+  .arm {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 7;
+    opacity: .30;
+  }
+  .arm path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
   main {
     position: relative;
     z-index: 2;
-    min-height: 100%;
-    display: flex;
-    flex-direction: column;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
     align-items: center;
-    justify-content: center;
     text-align: center;
-    padding: 2rem 1.5rem 16vh;
+    padding: 5vh 1.5rem 2rem;
   }
 
-  .compass {
-    width: 84px; height: 84px;
-    margin-bottom: 1.2rem;
-    filter: drop-shadow(0 0 14px rgba(255,200,87,.55));
+  /* Ribcage */
+  .ribs {
+    width: min(290px, 66vw);
+    height: auto;
+    overflow: visible;
+    filter: drop-shadow(0 0 22px rgba(255,106,43,.16));
   }
-  .needle { transform-origin: 50px 50px; animation: seek 6s ease-in-out infinite; }
-  @keyframes seek {
-    0%   { transform: rotate(20deg); }
-    20%  { transform: rotate(-35deg); }
-    45%  { transform: rotate(60deg); }
-    70%  { transform: rotate(-10deg); }
-    100% { transform: rotate(20deg); }
+  .ribs .bone { fill: none; stroke: var(--bone); stroke-width: 4.4; stroke-linecap: round; }
+  .ribs .edge { fill: none; stroke: #14110e; stroke-width: 8; stroke-linecap: round; }
+  .ribs .vert { fill: #cfc8b4; stroke: #14110e; stroke-width: 1.6; }
+  .ribs .sternum { fill: #cfc8b4; stroke: #14110e; stroke-width: 1.6; }
+  .ember-glow { transform-origin: 100px 104px; animation: beat 2.8s ease-in-out infinite; }
+  @keyframes beat {
+    0%, 45%, 100% { transform: scale(1); opacity: .85; }
+    8%  { transform: scale(1.3); opacity: 1; }
+    18% { transform: scale(1.02); opacity: .8; }
+    28% { transform: scale(1.22); opacity: 1; }
+  }
+  .ribs.rattle { animation: rattle .55s linear; }
+  @keyframes rattle {
+    0%,100% { transform: translate(0,0) rotate(0); }
+    10% { transform: translate(-3px, 1px) rotate(-.8deg); }
+    25% { transform: translate(3px, -1px) rotate(.9deg); }
+    40% { transform: translate(-4px, 0) rotate(-1deg); }
+    55% { transform: translate(3px, 1px) rotate(.8deg); }
+    70% { transform: translate(-2px, -1px) rotate(-.5deg); }
+    85% { transform: translate(2px, 0) rotate(.4deg); }
+  }
+  .flare .ember-glow { animation: flare .9s ease-out; }
+  @keyframes flare {
+    0% { transform: scale(2.3); opacity: 1; }
+    100% { transform: scale(1); opacity: .85; }
   }
 
   h1 {
-    font-size: clamp(2.4rem, 8vw, 5rem);
-    letter-spacing: .06em;
+    margin-top: 1.1rem;
+    font-weight: normal;
+    font-size: clamp(2.1rem, 9.2vw, 5.4rem);
+    letter-spacing: .12em;
     text-transform: uppercase;
-    background: linear-gradient(90deg, var(--gold), var(--ember), var(--gold));
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: shimmer 5s linear infinite;
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(217,211,193,.18), 0 2px 0 #000;
+    animation: flicker 9s infinite;
   }
-  @keyframes shimmer { to { background-position: 200% center; } }
+  h1 span {
+    background: linear-gradient(180deg, var(--ember-hot), var(--ember) 40%, var(--rust));
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px rgba(255,106,43,.35));
+  }
+  @keyframes flicker {
+    0%, 6%, 9%, 52%, 55%, 100% { opacity: 1; }
+    7% { opacity: .35; }
+    8% { opacity: .9; }
+    53% { opacity: .55; }
+    54% { opacity: 1; }
+  }
 
-  p.tag {
-    margin-top: .8rem;
-    max-width: 34rem;
-    font-size: clamp(1rem, 2.6vw, 1.3rem);
+  .tag {
+    margin-top: 1rem;
     font-style: italic;
-    color: #c9d3ff;
+    font-size: clamp(1.05rem, 2.8vw, 1.4rem);
+    color: var(--bone-dim);
+    letter-spacing: .04em;
   }
 
   button {
-    margin-top: 2rem;
-    padding: .85rem 2rem;
+    margin-top: 1.9rem;
+    padding: .8rem 1.9rem;
     font: inherit;
-    font-size: 1.05rem;
-    letter-spacing: .12em;
+    font-size: .95rem;
+    letter-spacing: .24em;
     text-transform: uppercase;
-    color: var(--night);
-    background: linear-gradient(135deg, var(--gold), var(--ember));
-    border: 0;
-    border-radius: 999px;
+    color: var(--bone);
+    background: rgba(14,12,11,.8);
+    border: 1px solid rgba(217,211,193,.45);
+    border-radius: 2px;
     cursor: pointer;
-    box-shadow: 0 0 0 0 rgba(255,122,61,.6);
-    animation: pulse 2.4s infinite;
-    transition: transform .15s;
+    transition: color .2s, border-color .2s, box-shadow .2s, background .2s;
   }
-  button:hover { transform: translateY(-2px) scale(1.04); }
-  @keyframes pulse {
-    70%  { box-shadow: 0 0 0 18px rgba(255,122,61,0); }
-    100% { box-shadow: 0 0 0 0 rgba(255,122,61,0); }
+  button:hover, button:focus-visible {
+    color: #fff4e3;
+    border-color: var(--ember);
+    background: rgba(40,16,8,.7);
+    box-shadow: 0 0 18px rgba(255,106,43,.35);
+    outline: none;
   }
-
   #log {
-    margin-top: 1.4rem;
-    min-height: 1.6em;
-    color: var(--ice);
-    font-size: 1.05rem;
+    margin-top: 1.2rem;
+    min-height: 1.7em;
+    max-width: 30rem;
+    font-style: italic;
+    color: var(--ember-hot);
+    opacity: .9;
   }
 
-  footer {
-    position: absolute;
-    bottom: .8rem;
-    width: 100%;
-    text-align: center;
-    z-index: 2;
-    font-size: .8rem;
-    color: rgba(238,242,255,.55);
+  /* Specimen cards */
+  .specimens { margin-top: 2.2rem; width: 100%; max-width: 44rem; }
+  .specimens h2 {
+    font-size: .8rem; font-weight: normal;
+    letter-spacing: .38em; text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 1rem;
   }
-
-  /* Game cards */
-  .games {
-    margin-top: 2.2rem;
-    width: 100%;
-    max-width: 44rem;
+  .specimens h2::before, .specimens h2::after {
+    content: ""; display: inline-block; width: 2.2rem; height: 1px;
+    background: rgba(143,138,123,.5); vertical-align: middle; margin: 0 .9rem;
   }
-  .games h2 {
-    font-size: .85rem;
-    font-weight: normal;
-    letter-spacing: .3em;
-    text-transform: uppercase;
-    color: var(--ice);
-    opacity: .8;
-    margin-bottom: .9rem;
-  }
-  .cards {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1rem;
-  }
+  .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
   .card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    width: 100%;
-    max-width: 21rem;
+    display: flex; align-items: center; gap: 1rem;
+    width: 100%; max-width: 21.5rem;
     padding: 1rem 1.2rem;
-    text-align: left;
-    text-decoration: none;
-    color: var(--text);
-    background: rgba(21, 27, 63, .65);
-    border: 1px solid rgba(255, 200, 87, .35);
-    border-radius: 14px;
-    backdrop-filter: blur(6px);
+    text-align: left; text-decoration: none; color: var(--bone);
+    background: linear-gradient(180deg, rgba(28,24,20,.88), rgba(12,10,9,.92));
+    border: 1px solid rgba(217,211,193,.22);
+    border-left: 3px solid var(--rust);
+    border-radius: 2px;
+    box-shadow: inset 0 0 30px rgba(0,0,0,.6);
     transition: transform .2s, border-color .2s, box-shadow .2s;
   }
   .card:hover, .card:focus-visible {
-    transform: translateY(-4px);
-    border-color: var(--gold);
-    box-shadow: 0 8px 28px rgba(255, 122, 61, .3), 0 0 0 1px rgba(255, 200, 87, .4);
+    transform: translateY(-3px);
+    border-color: rgba(255,106,43,.6);
+    border-left-color: var(--ember);
+    box-shadow: inset 0 0 30px rgba(0,0,0,.6), 0 6px 26px rgba(255,106,43,.18);
     outline: none;
   }
   .card .icon {
-    flex: none;
-    width: 3.4rem;
-    height: 3.4rem;
-    display: grid;
-    place-items: center;
-    font-size: 1.9rem;
+    flex: none; width: 3.2rem; height: 3.2rem;
+    display: grid; place-items: center;
+    font-size: 1.7rem;
+    border: 1px solid rgba(217,211,193,.3);
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, rgba(255, 200, 87, .35), rgba(11, 16, 38, .8));
-    box-shadow: 0 0 14px rgba(255, 200, 87, .35);
+    background: radial-gradient(circle at 50% 40%, #2a241d, #0b0a09);
+    filter: grayscale(.85) contrast(1.1);
   }
-  .card .title { display: block; font-size: 1.15rem; letter-spacing: .06em; color: var(--gold); }
-  .card .blurb { display: block; margin-top: .2rem; font-size: .9rem; font-style: italic; color: #c9d3ff; }
-  .card .go {
-    display: block;
-    margin-top: .45rem;
-    font-size: .75rem;
-    letter-spacing: .2em;
-    text-transform: uppercase;
-    color: var(--ember);
+  .card .no { display: block; font-size: .66rem; letter-spacing: .3em; text-transform: uppercase; color: var(--rust); }
+  .card .title { display: block; margin-top: .15rem; font-size: 1.15rem; letter-spacing: .08em; }
+  .card .blurb { display: block; margin-top: .2rem; font-size: .9rem; font-style: italic; color: var(--bone-dim); }
+  .card .go { display: block; margin-top: .45rem; font-size: .72rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ember); }
+
+  footer {
+    margin-top: 3.2rem;
+    text-align: center;
+    font-size: .75rem; letter-spacing: .22em; text-transform: uppercase;
+    color: rgba(143,138,123,.75);
   }
 
+  /* Things that watch from the dark (and flinch from the lantern) */
+  .eyes {
+    position: fixed; z-index: 7; pointer-events: none;
+    display: flex; gap: 11px; opacity: 0;
+    transition: opacity .7s ease-in-out;
+  }
+  .eyes.on { opacity: .9; }
+  .eyes.gone { opacity: 0; transition: opacity .12s linear; }
+  .eyes i {
+    width: 6px; height: 3px; border-radius: 50%;
+    background: #f2e8c9;
+    box-shadow: 0 0 8px 2px rgba(255,214,150,.55);
+    transition: transform .12s ease-in;
+  }
+  .eyes.shut i { transform: scaleY(.12); }
+  /* What they turn into: a vague scuttling shadow, felt more than seen */
+  .skitter {
+    position: fixed; z-index: 8; pointer-events: none;
+    width: 104px; height: 46px; margin: -23px 0 0 -52px;
+    opacity: 0; transition: opacity .25s ease-out;
+    filter: blur(2.2px);
+  }
+  .skitter.on { opacity: .85; }
+  .skitter svg { width: 100%; height: 100%; overflow: visible; }
+
   @media (prefers-reduced-motion: reduce) {
-    * { animation: none !important; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
 <body>
-  <div class="stars"></div>
-  <div class="aurora"></div>
-
-  <svg class="mountains" viewBox="0 0 1200 400" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0 400 L0 260 L140 150 L230 230 L360 90 L470 210 L560 160 L700 280 L820 120 L940 240 L1060 170 L1200 260 L1200 400 Z" fill="#1d1738" opacity=".85"/>
-    <path d="M0 400 L0 310 L110 240 L210 300 L340 200 L450 290 L580 230 L720 330 L860 220 L980 300 L1100 250 L1200 320 L1200 400 Z" fill="#0f0b22"/>
+  <div class="fog"></div>
+  <svg class="arm" id="arm" aria-hidden="true">
+    <defs>
+      <linearGradient id="fadeBone" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#cfc8b4" stop-opacity="0"/><stop offset="1" stop-color="#cfc8b4" stop-opacity="1"/></linearGradient>
+      <linearGradient id="fadeEdge" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0b0a09" stop-opacity="0"/><stop offset="1" stop-color="#0b0a09" stop-opacity="1"/></linearGradient>
+    </defs>
   </svg>
+  <div class="dark" id="dark"></div>
+  <div class="lamp" id="lamp"></div>
 
   <main>
-    <svg class="compass" viewBox="0 0 100 100" aria-hidden="true">
-      <circle cx="50" cy="50" r="46" fill="none" stroke="#ffc857" stroke-width="3"/>
-      <circle cx="50" cy="50" r="38" fill="rgba(11,16,38,.7)" stroke="#ffc857" stroke-width="1" opacity=".6"/>
-      <text x="50" y="16" text-anchor="middle" fill="#ffc857" font-size="9" font-family="Georgia,serif">N</text>
-      <g class="needle">
-        <polygon points="50,14 56,50 44,50" fill="#ff7a3d"/>
-        <polygon points="50,86 56,50 44,50" fill="#8fe3ff"/>
+    <svg class="ribs" id="ribs" viewBox="0 0 200 244" role="img" aria-label="A ribcage with an ember glowing inside">
+      <defs>
+        <radialGradient id="glow">
+          <stop offset="0" stop-color="#ffd9a0" stop-opacity="1"/>
+          <stop offset=".25" stop-color="#ff7a30" stop-opacity=".95"/>
+          <stop offset=".6" stop-color="#a5431f" stop-opacity=".35"/>
+          <stop offset="1" stop-color="#a5431f" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <g id="spine"></g>
+      <g id="ribset"></g>
+      <path class="sternum" d="M96 36 h8 l-1 78 l-3 12 l-3 -12 z"/>
+      <g class="ember-glow">
+        <circle cx="100" cy="104" r="56" fill="url(#glow)" style="mix-blend-mode:screen"/>
       </g>
-      <circle cx="50" cy="50" r="4" fill="#ffc857"/>
     </svg>
 
-    <h1>Base Camp</h1>
-    <p class="tag">The path ahead is unmapped. The gear is packed. The server is, miraculously, answering.</p>
+    <h1>Skeleton<span>belly</span></h1>
+    <p class="tag">Something rattles inside.</p>
 
-    <button id="go">Begin the Expedition</button>
+    <button id="go">Rattle the bones</button>
     <div id="log" aria-live="polite"></div>
 
-    <section class="games" aria-labelledby="games-heading">
-      <h2 id="games-heading">Expeditions</h2>
+    <section class="specimens" aria-labelledby="sp-heading">
+      <h2 id="sp-heading">Specimens</h2>
       <div class="cards">
         <a class="card" href="asteroidDoge/">
           <span class="icon" aria-hidden="true">&#128021;</span>
           <span>
+            <span class="no">Specimen No. 001</span>
             <span class="title">Asteroid Doge</span>
             <span class="blurb">Dodge the rocks. Survive the dark.</span>
-            <span class="go">Play &rarr;</span>
+            <span class="go">Enter &rarr;</span>
           </span>
         </a>
       </div>
     </section>
+    <footer>Skeletonbelly &middot; enter at your own risk</footer>
   </main>
 
-  <footer>Test site &middot; if you can read this... the trail is open.</footer>
-
 <script>
-  const messages = [
-    "Provisions checked. Rope: plenty.",
-    "Summit spotted on the horizon.",
-    "A hidden pass reveals itself...",
-    "The wind shifts. Onward!",
-    "You found a flag. Plant it."
+(function () {
+  var NS = "http://www.w3.org/2000/svg";
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* --- Build the ribcage --- */
+  function el(name, attrs) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  var spine = document.getElementById("spine");
+  for (var k = 0; k < 1; k++) {
+    spine.appendChild(el("rect", { class: "vert", x: 94 + (k % 2 ? 0.5 : -0.5), y: 14 + k * 19, width: 12, height: 13, rx: 4 }));
+  }
+  var widths = [44, 58, 68, 72, 68, 58, 44];
+  var set = document.getElementById("ribset");
+  var half = el("g", {});
+  for (var i = 0; i < widths.length; i++) {
+    var y = 36 + i * 24, w = widths[i], cx = 100;
+    var d = "M" + (cx + 4) + " " + y +
+      " C" + (cx + 4 + w * 0.7) + " " + (y - 8) + "," + (cx + 4 + w * 1.05) + " " + (y + 14) + "," + (cx + 4 + w * 0.85) + " " + (y + 34);
+    if (i < 4) {
+      d += " C" + (cx + 4 + w * 0.65) + " " + (y + 50) + "," + (cx + 14) + " " + (y + 46) + "," + (cx + 6) + " " + (y + 40);
+    } else {
+      d += " C" + (cx + 4 + w * 0.75) + " " + (y + 42) + "," + (cx + 4 + w * 0.6) + " " + (y + 48) + "," + (cx + 4 + w * 0.5) + " " + (y + 50);
+    }
+    half.appendChild(el("path", { class: "edge", d: d }));
+    half.appendChild(el("path", { class: "bone", d: d }));
+  }
+  var right = half, left = half.cloneNode(true);
+  left.setAttribute("transform", "translate(200 0) scale(-1 1)");
+  set.appendChild(left);
+  set.appendChild(right);
+
+  /* --- Lantern --- */
+  var dark = document.getElementById("dark"), lamp = document.getElementById("lamp");
+  var w = innerWidth, h = innerHeight;
+  var tx = w * 0.5, ty = h * 0.4, x = tx, y = ty, lastMove = -1e9;
+  addEventListener("resize", function () { w = innerWidth; h = innerHeight; });
+  addEventListener("pointermove", function (e) { tx = e.clientX; ty = e.clientY; lastMove = performance.now(); });
+  var baseR = matchMedia("(pointer: coarse)").matches ? 170 : 210;
+
+  /* --- Shadowy arm holding the lantern (two-bone IK from a lagging shoulder) --- */
+  var armSvg = document.getElementById("arm"), NS = "http://www.w3.org/2000/svg";
+  function bonePath(w, grad) {
+    var edge = document.createElementNS(NS, "path"), fill = document.createElementNS(NS, "path");
+    edge.setAttribute("stroke", grad ? "url(#fadeEdge)" : "#0b0a09"); edge.setAttribute("stroke-width", w + 3);
+    fill.setAttribute("stroke", grad ? "url(#fadeBone)" : "#cfc8b4"); fill.setAttribute("stroke-width", w);
+    armSvg.appendChild(edge); armSvg.appendChild(fill);
+    return function (d) { edge.setAttribute("d", d); fill.setAttribute("d", d); };
+  }
+  /* A faint lantern around the light's centre, hung by a short chain from the hand */
+  function lampPath(w, dash) {
+    var edge = document.createElementNS(NS, "path"), fill = document.createElementNS(NS, "path");
+    edge.setAttribute("stroke", "#0b0a09"); edge.setAttribute("stroke-width", w + 2);
+    fill.setAttribute("stroke", "#b59a72"); fill.setAttribute("stroke-width", w);
+    if (dash) { edge.setAttribute("stroke-dasharray", dash); fill.setAttribute("stroke-dasharray", dash); }
+    armSvg.appendChild(edge); armSvg.appendChild(fill);
+    return function (d) { edge.setAttribute("d", d); fill.setAttribute("d", d); };
+  }
+  var lanFrame = lampPath(2.4), lanBars = lampPath(1.3), lanChain = lampPath(2.2, "3.5 2.5");
+  var HANG = 66;                                      /* grip point sits this far above the light's centre */
+  function lantern(cx, cy) {
+    function q(x, y) { return (cx + x).toFixed(1) + " " + (cy + y).toFixed(1); }
+    lanFrame("M" + q(-16, -27) + "L" + q(-9, -37) + "L" + q(9, -37) + "L" + q(16, -27) + "Z" +   /* cap */
+             "M" + q(-16, -27) + "L" + q(-18, 27) + "M" + q(16, -27) + "L" + q(18, 27) +           /* posts */
+             "M" + q(-18, 27) + "L" + q(-13, 35) + "L" + q(13, 35) + "L" + q(18, 27) + "Z");       /* base */
+    lanBars("M" + q(-16, -27) + "L" + q(16, -27) + "M" + q(-18, 27) + "L" + q(18, 27) +
+            "M" + q(-6, -27) + "L" + q(-6.5, 27) + "M" + q(6, -27) + "L" + q(6.5, 27));
+    lanChain("M" + q(0, -37) + "L" + q(0, -HANG));                                                   /* hangs straight down */
+  }
+  var K = 1.35, Z = 0.75;                            /* overall scale: stroke widths (K) and geometry (Z) */
+  var radius = bonePath(3.6 * K, true), ulna = bonePath(4.2 * K, true), carpus = bonePath(8 * K), palm = bonePath(8 * K);
+  var thumb = bonePath(3 * K), fingers = [bonePath(3 * K), bonePath(3.2 * K), bonePath(3 * K), bonePath(2.7 * K)];
+  var fadeB = document.getElementById("fadeBone"), fadeE = document.getElementById("fadeEdge");
+  var side = 1;
+  function pt(p) { return p[0].toFixed(1) + " " + p[1].toFixed(1); }
+  function poly(pts) { return "M" + pts.map(pt).join("L"); }
+  /* A skeletal hand closed on an unseen handle just above the light's centre, with a stub of forearm fading into the dark */
+  function arm(lx, ly) {
+    var want = lx > innerWidth * 0.62 ? -1 : (lx < innerWidth * 0.38 ? 1 : (side < 0 ? -1 : 1));
+    side += (want - side) * 0.05;
+    var s = side, G = [lx, ly - HANG], rho = 8;
+    lantern(lx, ly);
+    function ring(r, deg) { var f = deg * Math.PI / 180; r *= Z; return [G[0] + s * r * Math.cos(f), G[1] - r * Math.sin(f)]; }
+    /* palm runs in from the side to the knuckles; the wrist bends up a little beyond it */
+    var Kc = ring(rho + 6, 38);
+    var pa = 0.2, fa = 0.62;
+    var W = [Kc[0] + s * 34 * Z * Math.cos(pa), Kc[1] - 34 * Z * Math.sin(pa)];
+    var F = [W[0] + s * 74 * Z * Math.cos(fa), W[1] - 74 * Z * Math.sin(fa)];   /* far end of the forearm stub */
+    var fx = Math.cos(fa) * s, fy = -Math.sin(fa), nx = -fy, ny = fx, o = 3.2 * K;
+    fadeB.setAttribute("x1", F[0]); fadeB.setAttribute("y1", F[1]); fadeB.setAttribute("x2", W[0]); fadeB.setAttribute("y2", W[1]);
+    fadeE.setAttribute("x1", F[0]); fadeE.setAttribute("y1", F[1]); fadeE.setAttribute("x2", W[0]); fadeE.setAttribute("y2", W[1]);
+    radius(poly([[F[0] + nx * o, F[1] + ny * o], [W[0] + nx * o * .7, W[1] + ny * o * .7]]));
+    ulna(poly([[F[0] - nx * o, F[1] - ny * o], [W[0] - nx * o * .7, W[1] - ny * o * .7]]));
+    carpus("M" + pt(W) + "l.1 0");
+    palm(poly([W, Kc]));
+    /* four fingers wrapped over the top and round the far side of the handle, tips curled under */
+    var ends = [262, 274, 268, 252], i;
+    for (i = 0; i < 4; i++) {
+      var r = rho + 3.2 + i * 4.6;
+      fingers[i](poly([ring(r, 38), ring(r, 95), ring(r, 165), ring(r - 1, 225), ring(r - 2, ends[i])]));
+    }
+    /* thumb laid across the top of the fingers */
+    thumb(poly([ring(rho + 8, 30), ring(rho + 17, 72), ring(rho + 15, 118)]));
+  }
+
+  function frame(t) {
+    if (t - lastMove > 3500) {
+      tx = w * (0.5 + 0.32 * Math.sin(t / 3300));
+      ty = h * (0.42 + 0.26 * Math.sin(t / 2500 + 1));
+    }
+    x += (tx - x) * 0.08;
+    y += (ty - y) * 0.08;
+    var r = baseR * (1 + 0.025 * Math.sin(t / 83) + 0.02 * Math.sin(t / 41));
+    dark.style.setProperty("--mx", x + "px");
+    dark.style.setProperty("--my", y + "px");
+    dark.style.setProperty("--r", r + "px");
+    lamp.style.setProperty("--mx", x + "px");
+    lamp.style.setProperty("--my", y + "px");
+    lamp.style.setProperty("--r", r + "px");
+    arm(x, y);
+    critterStep(t, x, y, r);
+    requestAnimationFrame(frame);
+  }
+  if (reduce) {
+    dark.style.setProperty("--mx", "50vw");
+    dark.style.setProperty("--my", "38vh");
+    dark.style.setProperty("--r", "420px");
+    dark.style.setProperty("--a", ".46");
+    arm(w * 0.5, h * 0.38);
+  } else {
+    requestAnimationFrame(frame);
+  }
+
+  /* --- Bone rattle sound (synthesized, no audio file) --- */
+  var actx = null;
+  function rattleSound() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      actx = actx || new AC();
+      if (actx.state === "suspended") actx.resume();
+      var now = actx.currentTime, master = actx.createGain();
+      master.gain.value = 0.35;
+      master.connect(actx.destination);
+      var len = Math.floor(actx.sampleRate * 0.05), buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0);
+      for (var j = 0; j < len; j++) d[j] = Math.random() * 2 - 1;
+      var t = now, hits = 9 + Math.floor(Math.random() * 4);
+      for (var k = 0; k < hits; k++) {
+        t += 0.018 + Math.random() * 0.05;
+        var vol = (0.35 + Math.random() * 0.65) * (1 - k / (hits + 2));
+        var src = actx.createBufferSource(); src.buffer = buf;
+        var bp = actx.createBiquadFilter(); bp.type = "bandpass";
+        bp.frequency.value = 1800 + Math.random() * 2800; bp.Q.value = 5 + Math.random() * 5;
+        var g = actx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.5 * vol, t + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03 + Math.random() * 0.025);
+        src.connect(bp); bp.connect(g); g.connect(master);
+        src.start(t); src.stop(t + 0.06);
+        var o = actx.createOscillator(); o.type = "triangle";
+        o.frequency.setValueAtTime(380 + Math.random() * 420, t);
+        o.frequency.exponentialRampToValueAtTime(180, t + 0.04);
+        var og = actx.createGain();
+        og.gain.setValueAtTime(0.0001, t);
+        og.gain.exponentialRampToValueAtTime(0.12 * vol, t + 0.002);
+        og.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+        o.connect(og); og.connect(master);
+        o.start(t); o.stop(t + 0.06);
+      }
+    } catch (e) {}
+  }
+
+  /* --- Rattle the bones --- */
+  var lines = [
+    "Nothing moved. Nothing at all.",
+    "You counted 24 ribs. There should be 24. Count again.",
+    "It's just the wind. Probably.",
+    "Something inside is still warm.",
+    "Don't look behind you.",
+    "The dust settles. Not on everything.",
+    "It rattled back."
   ];
-  let i = 0;
-  document.getElementById("go").addEventListener("click", () => {
-    document.getElementById("log").textContent = messages[i++ % messages.length];
+  var n = 0, ribs = document.getElementById("ribs"), log = document.getElementById("log");
+  document.getElementById("go").addEventListener("click", function () {
+    log.textContent = lines[n++ % lines.length];
+    rattleSound();
+    if (reduce) return;
+    ribs.classList.remove("rattle");
+    ribs.parentNode.classList.remove("flare");
+    void ribs.getBoundingClientRect();
+    ribs.classList.add("rattle");
+    ribs.parentNode.classList.add("flare");
+    setTimeout(function () { ribs.classList.remove("rattle"); }, 600);
   });
+
+  /* --- Eyes in the dark: they watch, and bolt from the lantern light --- */
+  var critters = [], nextSpawn = 1300, lastT = 0, spawned = 0;
+  /* A low, ragged smear with too many thin limbs: seen out of the corner of the eye, never quite resolved */
+  var SK = '<svg viewBox="0 0 76 34" aria-hidden="true"><g fill="none" stroke="#020203" stroke-linecap="round" stroke-width="1.8">' +
+    '<path d="M26 16 L10 6 L2 12 M27 18 L8 19 L3 28 M30 20 L20 29 L15 33 M33 14 L28 3 L33 0 M48 15 L62 5 L73 9 M49 18 L68 21 L72 29 M45 20 L55 30 L58 33"/></g>' +
+    '<ellipse cx="38" cy="18" rx="15" ry="7" fill="#020203"/><ellipse cx="33" cy="15" rx="8" ry="5" fill="#020203"/></svg>';
+
+  function pickSpot(lx, ly, minD) {
+    var px, py, tries = 0;
+    do {
+      if (Math.random() < 0.5) {
+        px = (Math.random() < 0.5 ? 0.03 + Math.random() * 0.14 : 0.8 + Math.random() * 0.15) * w;
+        py = (0.15 + Math.random() * 0.7) * h;
+      } else {
+        px = (0.1 + Math.random() * 0.8) * w;
+        py = ((Math.random() < 0.5 ? 0.04 : 0.88) + Math.random() * 0.06) * h;
+      }
+      tries++;
+    } while (Math.hypot(px - lx, py - ly) < minD && tries < 14);
+    return [px, py];
+  }
+  function spawn(lx, ly) {
+    var spot = pickSpot(lx, ly, baseR * 1.5), e = document.createElement("div");
+    e.className = "eyes"; e.innerHTML = "<i></i><i></i>";
+    e.style.left = (spot[0] - 11.5) + "px"; e.style.top = (spot[1] - 1.5) + "px";
+    document.body.appendChild(e);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { e.classList.add("on"); }); });
+    critters.push({ st: "watch", el: e, x: spot[0], y: spot[1], age: 0, life: 4 + Math.random() * 3.5, blink: 1.2 + Math.random() * 1.5 });
+    spawned++;
+  }
+  function flee(c, lx) {
+    c.st = "shut"; c.t = 0; c.el.classList.add("shut");
+    c.dir = c.x < lx ? -1 : 1;                               /* run away from the light, off the nearest side */
+    if (c.x < w * 0.12) c.dir = -1; else if (c.x > w * 0.88) c.dir = 1;
+  }
+  function critterStep(t, lx, ly, r) {
+    var dt = Math.min((t - lastT) / 1000, 0.05); lastT = t;
+    if (t > nextSpawn && critters.length < 2) {
+      spawn(lx, ly);
+      nextSpawn = t + 11000 + Math.random() * 13000;
+    }
+    for (var i = critters.length - 1; i >= 0; i--) {
+      var c = critters[i];
+      if (c.st === "watch") {
+        c.age += dt;
+        if (c.age > c.blink) { c.el.classList.add("shut"); if (c.age > c.blink + 0.16) { c.el.classList.remove("shut"); c.blink = c.age + 2 + Math.random() * 3; } }
+        if (c.age > 0.5 && Math.hypot(c.x - lx, c.y - ly) < r * 0.85) flee(c, lx);
+        else if (c.age > c.life) { c.el.classList.remove("on"); c.st = "fade"; c.t = 0; }
+      } else if (c.st === "fade") {
+        c.t += dt; if (c.t > 0.9) { c.el.remove(); critters.splice(i, 1); }
+      } else if (c.st === "shut") {                           /* eyes snap shut, then the shape takes over */
+        c.t += dt;
+        if (c.t > 0.2) {
+          c.el.classList.add("gone");
+          var k = document.createElement("div");
+          k.className = "skitter"; k.innerHTML = SK;
+          k.style.transform = "scaleX(" + (-c.dir) + ")";
+          k.style.left = c.x + "px"; k.style.top = c.y + "px";
+          document.body.appendChild(k);
+          requestAnimationFrame(function () { k.classList.add("on"); });
+          c.sk = k; c.st = "run"; c.t = 0; c.burst = 0.1; c.moving = true;
+          setTimeout((function (el) { return function () { el.remove(); }; })(c.el), 200);
+          c.el = null;
+        }
+      } else if (c.st === "run") {                            /* scuttle: short fast bursts with tiny stops */
+        c.t += dt; c.burst -= dt;
+        if (c.burst <= 0) { c.moving = !c.moving; c.burst = c.moving ? 0.07 + Math.random() * 0.08 : 0.03 + Math.random() * 0.07; }
+        if (c.moving) {
+          c.x += c.dir * 820 * dt;
+          c.y += (Math.random() - 0.5) * 420 * dt;
+          c.sk.firstChild.style.transform = (Math.floor(c.t * 30) % 2) ? "scaleY(.82)" : "scaleY(1)";
+        }
+        c.sk.style.left = c.x + "px"; c.sk.style.top = c.y + "px";
+        if (c.x < -90 || c.x > w + 90) { c.sk.remove(); critters.splice(i, 1); }
+      }
+    }
+  }
+})();
 </script>
 </body>
 </html>
