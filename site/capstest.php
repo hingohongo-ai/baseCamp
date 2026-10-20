@@ -2,11 +2,18 @@
 // TEMPORARY capability test page for skeletonbelly.com. Delete after testing.
 $m = $_GET['m'] ?? 'ui';
 
+// Incompressible filler (random hex lines starting with '.'); compression cannot shrink it, so it forces a flush.
+function padding($n) {
+    $out = '';
+    while (strlen($out) < $n) { $out .= '.' . bin2hex(random_bytes(31)) . "\n"; }
+    return substr($out, 0, $n) . "\n";
+}
+
 function nobuf() {
     @ini_set('output_buffering', '0');
     @ini_set('zlib.output_compression', '0');
     header('X-Accel-Buffering: no');
-    header('Cache-Control: no-store');
+    header('Cache-Control: no-store, no-transform');
     while (ob_get_level() > 0) { @ob_end_flush(); }
     ob_implicit_flush(true);
 }
@@ -24,7 +31,7 @@ if ($m === 'stream') {                      // does plain streaming reach the br
     header('Content-Type: text/plain; charset=utf-8');
     nobuf();
     $pad = max(0, min(65536, (int)($_GET['pad'] ?? 2048)));
-    echo str_repeat(' ', $pad) . "\n";      // push past proxy buffers (size set by ?pad=)
+    echo padding($pad);      // push past proxy buffers and compression (size set by ?pad=)
     for ($i = 1; $i <= 8; $i++) {
         echo "chunk $i\n";
         flush();
@@ -44,7 +51,7 @@ if ($m === 'claude') {                      // stream a real model response thro
     $key = is_readable($keyFile) ? trim((string)file_get_contents($keyFile)) : '';
     if ($key === '') exit("no-key\n");
     $pad = max(0, min(65536, (int)($_GET['pad'] ?? 2048)));
-    echo str_repeat(' ', $pad) . "\n";
+    echo padding($pad);
     flush();
     $t0 = microtime(true); $first = null; $deltas = 0; $buf = '';
     $ch = curl_init('https://api.anthropic.com/v1/messages');
@@ -143,7 +150,8 @@ document.querySelectorAll('button').forEach(b => b.onclick = async () => {
     for (;;) {
       const {done, value} = await rd.read();
       if (done) break;
-      const txt = dec.decode(value, {stream: true});
+      const txt = dec.decode(value, {stream: true}).replace(/\.[0-9a-f]{20,}\n?/g, '');
+      if (!txt.trim()) continue;   // padding-only piece
       if (m === 'stream' || m === 'claude') out.textContent += '[' + stamp() + '] ' + (m === 'stream' ? txt.trim() + '\n' : txt);
       else out.textContent += txt;
     }
