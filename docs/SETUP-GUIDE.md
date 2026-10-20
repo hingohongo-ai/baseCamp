@@ -29,8 +29,7 @@ Plesk and GitHub rename things occasionally, so treat labels as close, not exact
 
 Host limits we found:
 - SSH is Forbidden, so everything goes through the Plesk UI (File Manager, Git).
-- PHP is not offered (only FastCGI, CGI, SSI). Games must be static.
-- Node.js 21.7.3 exists in Plesk but is not enabled; not needed for static games.
+- PHP 8.4 and Node.js 21 are available but OFF by default (section 12). Games are static; turn the server-side features on only for a project that needs them.
 - HTTPS works (free Let's Encrypt certificate, section 11). 20 GB disk, unlimited traffic.
 
 ## 1. One-time machine setup
@@ -195,6 +194,10 @@ root folder from File Manager.
 | Site does not update after a push | Check the Action is green, webhook **Recent Deliveries**, then try a manual pull in Plesk. |
 | Plesk says document root is not within the subscription | The new domain's path must be inside the subscription's webspace (relative folder such as `/testsite`). |
 | `npm` or `node` not found | Install Node LTS and reopen the terminal. |
+| WebSocket connect fails instantly (code 1006) | nginx Proxy mode is ticked. Untick it (section 12c). |
+| PHP output arrives all at once instead of streaming | Same cause: nginx Proxy mode (section 12c). |
+| PHP files download or show raw code | PHP support is off for the domain (section 12a). |
+| A model reply is empty with stop reason `max_tokens` | The token cap was used up by thinking. Raise `max_tokens` (section 12e notes). |
 | Domain lookup says "Query refused" from `ns.xmission.com` | DNS zone not created or not propagated yet (section 11c). |
 | Let's Encrypt "secondary validation" DNS error | Zone not on all name servers yet. Wait and retry (section 11d). |
 | Padlock on `www` but "Not secure" on the bare domain | Usually stale browser state. Test in a private window; clear site data (section 11e). |
@@ -259,3 +262,68 @@ site's data (Brave/Chrome: lock or site-info icon -> Site settings -> Delete
 data), or restart the browser. Also try a phone on cellular data. If the
 certificate details name antivirus software instead of Let's Encrypt, turn off
 its HTTPS scanning.
+
+## 12. Server-side features: PHP, Node.js, websockets
+
+Tested 2026-10-20. All of these are off by default. Turn one on only when a project
+needs it and turn it off again afterwards (PHP in particular allows `shell_exec`,
+so leaving it on with nothing using it is extra risk). Never commit keys or
+passwords to this repo; see 12e.
+
+### 12a. PHP on/off
+
+1. Plesk -> **Websites & Domains** -> the domain -> **Dashboard** tab -> **Dev Tools** -> **PHP**.
+2. The first control is a checkbox **PHP support**. Tick it to enable, untick to
+   disable, then click **OK/Apply** at the bottom.
+3. A "view the phpinfo() page" link on that page shows the full PHP configuration.
+   Do not leave a public phpinfo page on the live site.
+
+Note: the Account page's "Hosting Options" still says PHP support is Off even when it
+is enabled per site. Use the PHP page, not that tab.
+
+### 12b. Node.js on/off
+
+1. Domain -> **Get Started** tab -> **Node.js** icon (opens the Node.js dashboard).
+2. If Node.js is off there is an **Enable Node.js** button. When it is on, the button
+   reads **Disable Node.js**.
+3. The dashboard shows Application Root, Application Startup File (default `app.js`),
+   Node version, and has **Restart App** and a **Run Node.js commands** tab. Files in
+   the app open in a built-in code editor.
+4. With the app root at the domain root, only paths that are not real files reach the app.
+   For a real app, prefer a subfolder or subdomain.
+
+### 12c. Websockets and streaming (nginx "Proxy mode")
+
+Websocket connections are refused, and PHP output is held back until the script
+ends, unless nginx's proxy mode is switched off.
+
+1. Domain -> **Hosting & DNS** tab -> **Apache & nginx** icon.
+2. Scroll to the **nginx settings** section. **Untick "Proxy mode"** (the first control).
+3. Click **OK/Apply**.
+
+With it unticked: websockets connect (0.2 s) and stay open (tested over 200 s, and
+143 s with no traffic); PHP can stream output as it is produced, including Claude
+API responses.
+
+Trade-off: the setting is per domain. nginx no longer fronts Apache, so Apache serves
+static files directly. Performance was not measured. Tick the box again (and Apply)
+to restore the original behavior when websockets or streaming are not in use.
+
+### 12d. Quick test pages (temporary)
+
+Use a tiny temporary file, deploy or upload it, test, then delete it and turn the
+feature back off. Tested examples: a PHP page printing the version and loaded
+extensions; a Node `app.js` that answers at `/nodetest`; a Node websocket echo with
+a server tick every 2 seconds. Do not leave test files on the live site.
+
+### 12e. Keeping an API key or password on the host
+
+1. In File Manager, at the top level (the folder that contains both `skeletonbelly.com`
+   and `httpdocs`), create a folder `private`. Nothing there is web-served.
+2. Put the secret in a file inside it (for example `anthropic.key`). Set the folder to
+   `rwx------` (700) and the file to `rw-------` (600). If PHP cannot read it, loosen
+   only as far as needed.
+3. PHP reads it with `dirname($_SERVER['DOCUMENT_ROOT']) . '/private/<file>'`.
+4. Never put the key in the public repos, in `site/`, or in browser JavaScript.
+5. A public endpoint that calls a paid API can run up a bill: cap output tokens, set a
+   spend limit on the key, throttle or authenticate the endpoint, and cache results.
