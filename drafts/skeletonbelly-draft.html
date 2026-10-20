@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skeletonbelly</title>
+<meta name="description" content="Browser games from somewhere dark. Something rattles inside.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#128128;</text></svg>">
+<style>
+  :root {
+    --void: #0c0d11;
+    --soot: #1b1815;
+    --bone: #d9d3c1;
+    --bone-dim: #aaa594;
+    --rust: #a5431f;
+    --ember: #ff6a2b;
+    --ember-hot: #ffb36b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    color: var(--bone);
+    background: radial-gradient(120% 90% at 50% 30%, #2a231c 0%, var(--soot) 45%, var(--void) 100%);
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Drifting fog */
+  .fog {
+    position: fixed; inset: -20%;
+    pointer-events: none;
+    z-index: 1;
+    background:
+      radial-gradient(40% 30% at 20% 70%, rgba(150,140,120,.10), transparent 70%),
+      radial-gradient(45% 30% at 80% 60%, rgba(150,140,120,.08), transparent 70%),
+      radial-gradient(60% 25% at 50% 95%, rgba(150,140,120,.12), transparent 70%);
+    filter: blur(22px);
+    animation: fog 40s ease-in-out infinite alternate;
+  }
+  @keyframes fog {
+    from { transform: translateX(-5%) scale(1); }
+    to   { transform: translateX(5%) scale(1.08); }
+  }
+
+  /* The lantern: a darkness layer with a hole that follows the pointer */
+  .dark {
+    --mx: 50vw; --my: 40vh; --r: 210px; --a: .5;
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 8;
+    background: radial-gradient(circle at var(--mx) var(--my),
+      rgba(3,3,5,0) 0,
+      rgba(3,3,5,.06) calc(var(--r) * .45),
+      rgba(3,3,5,.32) var(--r),
+      rgba(3,3,5,var(--a)) calc(var(--r) * 2.3));
+  }
+  @media (pointer: coarse) { .dark { --a: .4; --r: 170px; } }
+
+  /* Warm light that rides with the lantern, so it still stands out */
+  .lamp {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 9;
+    mix-blend-mode: screen;
+    background: radial-gradient(circle at var(--mx, 50vw) var(--my, 40vh),
+      rgba(255,196,130,.20) 0,
+      rgba(255,150,80,.10) calc(var(--r, 210px) * .8),
+      rgba(255,120,60,0) calc(var(--r, 210px) * 1.9));
+  }
+
+  main {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 5vh 1.5rem 2rem;
+  }
+
+  /* Ribcage */
+  .ribs {
+    width: min(290px, 66vw);
+    height: auto;
+    overflow: visible;
+    filter: drop-shadow(0 0 22px rgba(255,106,43,.16));
+  }
+  .ribs .bone { fill: none; stroke: var(--bone); stroke-width: 4.4; stroke-linecap: round; }
+  .ribs .edge { fill: none; stroke: #14110e; stroke-width: 8; stroke-linecap: round; }
+  .ribs .vert { fill: #cfc8b4; stroke: #14110e; stroke-width: 1.6; }
+  .ribs .sternum { fill: #cfc8b4; stroke: #14110e; stroke-width: 1.6; }
+  .ember-glow { transform-origin: 100px 104px; animation: beat 2.8s ease-in-out infinite; }
+  @keyframes beat {
+    0%, 45%, 100% { transform: scale(1); opacity: .85; }
+    8%  { transform: scale(1.3); opacity: 1; }
+    18% { transform: scale(1.02); opacity: .8; }
+    28% { transform: scale(1.22); opacity: 1; }
+  }
+  .ribs.rattle { animation: rattle .55s linear; }
+  @keyframes rattle {
+    0%,100% { transform: translate(0,0) rotate(0); }
+    10% { transform: translate(-3px, 1px) rotate(-.8deg); }
+    25% { transform: translate(3px, -1px) rotate(.9deg); }
+    40% { transform: translate(-4px, 0) rotate(-1deg); }
+    55% { transform: translate(3px, 1px) rotate(.8deg); }
+    70% { transform: translate(-2px, -1px) rotate(-.5deg); }
+    85% { transform: translate(2px, 0) rotate(.4deg); }
+  }
+  .flare .ember-glow { animation: flare .9s ease-out; }
+  @keyframes flare {
+    0% { transform: scale(2.3); opacity: 1; }
+    100% { transform: scale(1); opacity: .85; }
+  }
+
+  h1 {
+    margin-top: 1.1rem;
+    font-weight: normal;
+    font-size: clamp(2.1rem, 9.2vw, 5.4rem);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(217,211,193,.18), 0 2px 0 #000;
+    animation: flicker 9s infinite;
+  }
+  h1 span {
+    background: linear-gradient(180deg, var(--ember-hot), var(--ember) 40%, var(--rust));
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px rgba(255,106,43,.35));
+  }
+  @keyframes flicker {
+    0%, 6%, 9%, 52%, 55%, 100% { opacity: 1; }
+    7% { opacity: .35; }
+    8% { opacity: .9; }
+    53% { opacity: .55; }
+    54% { opacity: 1; }
+  }
+
+  .tag {
+    margin-top: 1rem;
+    font-style: italic;
+    font-size: clamp(1.05rem, 2.8vw, 1.4rem);
+    color: var(--bone-dim);
+    letter-spacing: .04em;
+  }
+
+  button {
+    margin-top: 1.9rem;
+    padding: .8rem 1.9rem;
+    font: inherit;
+    font-size: .95rem;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    color: var(--bone);
+    background: rgba(14,12,11,.8);
+    border: 1px solid rgba(217,211,193,.45);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: color .2s, border-color .2s, box-shadow .2s, background .2s;
+  }
+  button:hover, button:focus-visible {
+    color: #fff4e3;
+    border-color: var(--ember);
+    background: rgba(40,16,8,.7);
+    box-shadow: 0 0 18px rgba(255,106,43,.35);
+    outline: none;
+  }
+  #log {
+    margin-top: 1.2rem;
+    min-height: 1.7em;
+    max-width: 30rem;
+    font-style: italic;
+    color: var(--ember-hot);
+    opacity: .9;
+  }
+
+  /* Specimen cards */
+  .specimens { margin-top: 2.2rem; width: 100%; max-width: 44rem; }
+  .specimens h2 {
+    font-size: .8rem; font-weight: normal;
+    letter-spacing: .38em; text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 1rem;
+  }
+  .specimens h2::before, .specimens h2::after {
+    content: ""; display: inline-block; width: 2.2rem; height: 1px;
+    background: rgba(143,138,123,.5); vertical-align: middle; margin: 0 .9rem;
+  }
+  .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
+  .card {
+    display: flex; align-items: center; gap: 1rem;
+    width: 100%; max-width: 21.5rem;
+    padding: 1rem 1.2rem;
+    text-align: left; text-decoration: none; color: var(--bone);
+    background: linear-gradient(180deg, rgba(28,24,20,.88), rgba(12,10,9,.92));
+    border: 1px solid rgba(217,211,193,.22);
+    border-left: 3px solid var(--rust);
+    border-radius: 2px;
+    box-shadow: inset 0 0 30px rgba(0,0,0,.6);
+    transition: transform .2s, border-color .2s, box-shadow .2s;
+  }
+  .card:hover, .card:focus-visible {
+    transform: translateY(-3px);
+    border-color: rgba(255,106,43,.6);
+    border-left-color: var(--ember);
+    box-shadow: inset 0 0 30px rgba(0,0,0,.6), 0 6px 26px rgba(255,106,43,.18);
+    outline: none;
+  }
+  .card .icon {
+    flex: none; width: 3.2rem; height: 3.2rem;
+    display: grid; place-items: center;
+    font-size: 1.7rem;
+    border: 1px solid rgba(217,211,193,.3);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%, #2a241d, #0b0a09);
+    filter: grayscale(.85) contrast(1.1);
+  }
+  .card .no { display: block; font-size: .66rem; letter-spacing: .3em; text-transform: uppercase; color: var(--rust); }
+  .card .title { display: block; margin-top: .15rem; font-size: 1.15rem; letter-spacing: .08em; }
+  .card .blurb { display: block; margin-top: .2rem; font-size: .9rem; font-style: italic; color: var(--bone-dim); }
+  .card .go { display: block; margin-top: .45rem; font-size: .72rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ember); }
+
+  footer {
+    margin-top: 3.2rem;
+    text-align: center;
+    font-size: .75rem; letter-spacing: .22em; text-transform: uppercase;
+    color: rgba(143,138,123,.75);
+  }
+
+  /* Things that watch from the dark */
+  .eyes {
+    position: fixed; z-index: 7; pointer-events: none;
+    display: flex; gap: 11px; opacity: 0;
+    animation: watch 2.6s ease-in-out forwards;
+  }
+  .eyes i {
+    width: 6px; height: 3px; border-radius: 50%;
+    background: #f2e8c9;
+    box-shadow: 0 0 8px 2px rgba(255,214,150,.55);
+  }
+  @keyframes watch {
+    0% { opacity: 0; transform: scaleY(1); }
+    15%, 40% { opacity: .9; transform: scaleY(1); }
+    46% { transform: scaleY(.1); }
+    52% { transform: scaleY(1); }
+    80% { opacity: .9; }
+    100% { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="fog"></div>
+  <div class="dark" id="dark"></div>
+  <div class="lamp" id="lamp"></div>
+
+  <main>
+    <svg class="ribs" id="ribs" viewBox="0 0 200 244" role="img" aria-label="A ribcage with an ember glowing inside">
+      <defs>
+        <radialGradient id="glow">
+          <stop offset="0" stop-color="#ffd9a0" stop-opacity="1"/>
+          <stop offset=".25" stop-color="#ff7a30" stop-opacity=".95"/>
+          <stop offset=".6" stop-color="#a5431f" stop-opacity=".35"/>
+          <stop offset="1" stop-color="#a5431f" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <g id="spine"></g>
+      <g id="ribset"></g>
+      <path class="sternum" d="M96 36 h8 l-1 78 l-3 12 l-3 -12 z"/>
+      <g class="ember-glow">
+        <circle cx="100" cy="104" r="56" fill="url(#glow)" style="mix-blend-mode:screen"/>
+      </g>
+    </svg>
+
+    <h1>Skeleton<span>belly</span></h1>
+    <p class="tag">Something rattles inside.</p>
+
+    <button id="go">Rattle the bones</button>
+    <div id="log" aria-live="polite"></div>
+
+    <section class="specimens" aria-labelledby="sp-heading">
+      <h2 id="sp-heading">Specimens</h2>
+      <div class="cards">
+        <a class="card" href="asteroidDoge/">
+          <span class="icon" aria-hidden="true">&#128021;</span>
+          <span>
+            <span class="no">Specimen No. 001</span>
+            <span class="title">Asteroid Doge</span>
+            <span class="blurb">Dodge the rocks. Survive the dark.</span>
+            <span class="go">Enter &rarr;</span>
+          </span>
+        </a>
+      </div>
+    </section>
+    <footer>Skeletonbelly &middot; enter at your own risk</footer>
+  </main>
+
+<script>
+(function () {
+  var NS = "http://www.w3.org/2000/svg";
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* --- Build the ribcage --- */
+  function el(name, attrs) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  var spine = document.getElementById("spine");
+  for (var k = 0; k < 1; k++) {
+    spine.appendChild(el("rect", { class: "vert", x: 94 + (k % 2 ? 0.5 : -0.5), y: 14 + k * 19, width: 12, height: 13, rx: 4 }));
+  }
+  var widths = [44, 58, 68, 72, 68, 58, 44];
+  var set = document.getElementById("ribset");
+  var half = el("g", {});
+  for (var i = 0; i < widths.length; i++) {
+    var y = 36 + i * 24, w = widths[i], cx = 100;
+    var d = "M" + (cx + 4) + " " + y +
+      " C" + (cx + 4 + w * 0.7) + " " + (y - 8) + "," + (cx + 4 + w * 1.05) + " " + (y + 14) + "," + (cx + 4 + w * 0.85) + " " + (y + 34);
+    if (i < 4) {
+      d += " C" + (cx + 4 + w * 0.65) + " " + (y + 50) + "," + (cx + 14) + " " + (y + 46) + "," + (cx + 6) + " " + (y + 40);
+    } else {
+      d += " C" + (cx + 4 + w * 0.75) + " " + (y + 42) + "," + (cx + 4 + w * 0.6) + " " + (y + 48) + "," + (cx + 4 + w * 0.5) + " " + (y + 50);
+    }
+    half.appendChild(el("path", { class: "edge", d: d }));
+    half.appendChild(el("path", { class: "bone", d: d }));
+  }
+  var right = half, left = half.cloneNode(true);
+  left.setAttribute("transform", "translate(200 0) scale(-1 1)");
+  set.appendChild(left);
+  set.appendChild(right);
+
+  /* --- Lantern --- */
+  var dark = document.getElementById("dark"), lamp = document.getElementById("lamp");
+  var w = innerWidth, h = innerHeight;
+  var tx = w * 0.5, ty = h * 0.4, x = tx, y = ty, lastMove = -1e9;
+  addEventListener("resize", function () { w = innerWidth; h = innerHeight; });
+  addEventListener("pointermove", function (e) { tx = e.clientX; ty = e.clientY; lastMove = performance.now(); });
+  var baseR = matchMedia("(pointer: coarse)").matches ? 170 : 210;
+
+  function frame(t) {
+    if (t - lastMove > 3500) {
+      tx = w * (0.5 + 0.32 * Math.sin(t / 3300));
+      ty = h * (0.42 + 0.26 * Math.sin(t / 2500 + 1));
+    }
+    x += (tx - x) * 0.08;
+    y += (ty - y) * 0.08;
+    var r = baseR * (1 + 0.025 * Math.sin(t / 83) + 0.02 * Math.sin(t / 41));
+    dark.style.setProperty("--mx", x + "px");
+    dark.style.setProperty("--my", y + "px");
+    dark.style.setProperty("--r", r + "px");
+    lamp.style.setProperty("--mx", x + "px");
+    lamp.style.setProperty("--my", y + "px");
+    lamp.style.setProperty("--r", r + "px");
+    requestAnimationFrame(frame);
+  }
+  if (reduce) {
+    dark.style.setProperty("--mx", "50vw");
+    dark.style.setProperty("--my", "38vh");
+    dark.style.setProperty("--r", "420px");
+    dark.style.setProperty("--a", ".4");
+  } else {
+    requestAnimationFrame(frame);
+  }
+
+  /* --- Bone rattle sound (synthesized, no audio file) --- */
+  var actx = null;
+  function rattleSound() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      actx = actx || new AC();
+      if (actx.state === "suspended") actx.resume();
+      var now = actx.currentTime, master = actx.createGain();
+      master.gain.value = 0.35;
+      master.connect(actx.destination);
+      var len = Math.floor(actx.sampleRate * 0.05), buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0);
+      for (var j = 0; j < len; j++) d[j] = Math.random() * 2 - 1;
+      var t = now, hits = 9 + Math.floor(Math.random() * 4);
+      for (var k = 0; k < hits; k++) {
+        t += 0.018 + Math.random() * 0.05;
+        var vol = (0.35 + Math.random() * 0.65) * (1 - k / (hits + 2));
+        var src = actx.createBufferSource(); src.buffer = buf;
+        var bp = actx.createBiquadFilter(); bp.type = "bandpass";
+        bp.frequency.value = 1800 + Math.random() * 2800; bp.Q.value = 5 + Math.random() * 5;
+        var g = actx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.5 * vol, t + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03 + Math.random() * 0.025);
+        src.connect(bp); bp.connect(g); g.connect(master);
+        src.start(t); src.stop(t + 0.06);
+        var o = actx.createOscillator(); o.type = "triangle";
+        o.frequency.setValueAtTime(380 + Math.random() * 420, t);
+        o.frequency.exponentialRampToValueAtTime(180, t + 0.04);
+        var og = actx.createGain();
+        og.gain.setValueAtTime(0.0001, t);
+        og.gain.exponentialRampToValueAtTime(0.12 * vol, t + 0.002);
+        og.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+        o.connect(og); og.connect(master);
+        o.start(t); o.stop(t + 0.06);
+      }
+    } catch (e) {}
+  }
+
+  /* --- Rattle the bones --- */
+  var lines = [
+    "Nothing moved. Nothing at all.",
+    "You counted 24 ribs. There should be 24. Count again.",
+    "It's just the wind. Probably.",
+    "Something inside is still warm.",
+    "Don't look behind you.",
+    "The dust settles. Not on everything.",
+    "It rattled back."
+  ];
+  var n = 0, ribs = document.getElementById("ribs"), log = document.getElementById("log");
+  document.getElementById("go").addEventListener("click", function () {
+    log.textContent = lines[n++ % lines.length];
+    rattleSound();
+    if (reduce) return;
+    ribs.classList.remove("rattle");
+    ribs.parentNode.classList.remove("flare");
+    void ribs.getBoundingClientRect();
+    ribs.classList.add("rattle");
+    ribs.parentNode.classList.add("flare");
+    setTimeout(function () { ribs.classList.remove("rattle"); }, 600);
+  });
+
+  /* --- Eyes in the dark --- */
+  function watcher() {
+    if (!document.hidden) {
+      var e = document.createElement("div");
+      e.className = "eyes";
+      e.innerHTML = "<i></i><i></i>";
+      var edge = Math.random() < 0.5;
+      e.style.left = (edge ? (Math.random() < 0.5 ? 3 + Math.random() * 14 : 80 + Math.random() * 15) : 10 + Math.random() * 80) + "vw";
+      e.style.top = (edge ? 15 + Math.random() * 70 : (Math.random() < 0.5 ? 4 : 88) + Math.random() * 6) + "vh";
+      document.body.appendChild(e);
+      setTimeout(function () { e.remove(); }, 2800);
+    }
+    setTimeout(watcher, 14000 + Math.random() * 16000);
+  }
+  if (!reduce) setTimeout(watcher, 9000);
+})();
+</script>
+</body>
+</html>
