@@ -58,7 +58,7 @@ if ($m === 'claude') {                      // stream a real model response thro
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => json_encode([
-            'model' => 'claude-haiku-5-5', 'max_tokens' => 400, 'stream' => true,
+            'model' => 'claude-haiku-5-5', 'max_tokens' => 2000, 'stream' => true,
             'messages' => [['role' => 'user', 'content' => 'Tell a spooky 150-word story about a skeleton who lost his stomach.']],
         ]),
         CURLOPT_HTTPHEADER => ['content-type: application/json', 'anthropic-version: 2023-06-01', 'x-api-key: ' . $key],
@@ -71,6 +71,7 @@ if ($m === 'claude') {                      // stream a real model response thro
                 if (strpos($line, 'data:') !== 0) continue;
                 $j = json_decode(trim(substr($line, 5)), true);
                 $ty = $j['type'] ?? '?'; $types[$ty] = ($types[$ty] ?? 0) + 1;
+                if (isset($j['delta']['type'])) { $k2 = 'delta:' . $j['delta']['type']; $types[$k2] = ($types[$k2] ?? 0) + 1; }
                 if (isset($j['delta']['stop_reason'])) { $stop = (string)$j['delta']['stop_reason']; }
                 if (($j['type'] ?? '') === 'content_block_delta' && isset($j['delta']['text'])) {
                     if ($first === null) { $first = microtime(true) - $t0; }
